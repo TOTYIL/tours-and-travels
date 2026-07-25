@@ -1,5 +1,6 @@
 import { Compass } from 'lucide-react';
 import { useRef } from 'react';
+import logoImage from '../assets/logo.png';
 
 export default function Header({ onNavigate, currentPage }: { onNavigate: (page: 'home' | 'booking' | 'dev') => void, currentPage: string }) {
   const clickCount = useRef(0);
@@ -36,7 +37,7 @@ export default function Header({ onNavigate, currentPage }: { onNavigate: (page:
           className="cursor-pointer z-10"
           onClick={handleLogoClick}
         >
-          <img src="/logo.png" alt="Yazdani Travels Logo" className="h-12 w-auto object-contain rounded-xl" />
+          <img src={logoImage} alt="Yazdani Travels Logo" className="h-12 w-auto object-contain rounded-xl" />
         </div>
         <div 
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer whitespace-nowrap"
@@ -53,7 +54,7 @@ export default function Header({ onNavigate, currentPage }: { onNavigate: (page:
         className="hidden md:flex items-center gap-3 cursor-pointer group"
         onClick={handleLogoClick}
       >
-        <img src="/logo.png" alt="Yazdani Travels Logo" className="h-14 w-auto object-contain rounded-xl" />
+        <img src={logoImage} alt="Yazdani Travels Logo" className="h-14 w-auto object-contain rounded-xl" />
       </div>
 
       <div 
