@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowRight, Mountain, ShieldCheck, Map, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { getSlideshow } from '../lib/data';
-import heroBg from '../assets/hero-bg.png';
+import { heroBgBase64 } from '../assets/heroBgBase64';
 
 export default function Home({ onBookNow }: { onBookNow: () => void }) {
   const [slideshow, setSlideshow] = useState<string[]>([]);
@@ -22,7 +22,7 @@ export default function Home({ onBookNow }: { onBookNow: () => void }) {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full relative z-10 flex flex-col items-center">
       {/* Hero Background */}
       <div className="absolute top-0 left-0 right-0 h-[650px] md:h-[700px] z-0 pointer-events-none select-none">
-        <div className="absolute inset-0 bg-cover bg-center mix-blend-multiply opacity-100" style={{ backgroundImage: `url(${heroBg})` }}></div>
+        <div className="absolute inset-0 bg-cover bg-center mix-blend-multiply opacity-100" style={{ backgroundImage: `url(${heroBgBase64})` }}></div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#F6F8F6]/40 to-[#F6F8F6]"></div>
       </div>
 
