@@ -2,67 +2,25 @@ import { useState, useMemo, useEffect } from 'react';
 import { CalendarDays, Clock, ChevronLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
+import { getFleet, saveFleet, saveBooking, Bike } from '../lib/data';
 
-const FLEET = [
-  {
-    id: 'himalayan',
-    name: 'Royal Enfield Himalayan 411',
-    category: 'Adventure',
-    basePricePerDay: 1500,
-    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=800',
-    features: ['All-Terrain Tyres', 'Panniers Available', 'ABS', '411cc Engine'],
-  },
-  {
-    id: 'classic350',
-    name: 'Royal Enfield Classic 350',
-    category: 'Cruiser',
-    basePricePerDay: 1200,
-    imageUrl: 'https://images.unsplash.com/photo-1599819811279-d5064ce97fe2?auto=format&fit=crop&q=80&w=800',
-    features: ['Comfortable Seating', 'Classic Styling', '349cc Engine', 'Disc Brakes'],
-  },
-  {
-    id: 'meteor',
-    name: 'Royal Enfield Meteor 350',
-    category: 'Cruiser',
-    basePricePerDay: 1300,
-    imageUrl: 'https://images.unsplash.com/photo-1647413340578-8ba948b89e7f?auto=format&fit=crop&q=80&w=800',
-    features: ['Tripper Navigation', 'Relaxed Stance', '349cc Engine'],
-  },
-  {
-    id: 'xpulse',
-    name: 'Hero XPulse 200 4V',
-    category: 'Off-Road',
-    basePricePerDay: 1000,
-    imageUrl: 'https://images.unsplash.com/photo-1650383794354-946453664d95?auto=format&fit=crop&q=80&w=800',
-    features: ['Lightweight', 'High Ground Clearance', '200cc Engine', 'Off-Road Suspension'],
-  },
-  {
-    id: 'ntorq',
-    name: 'TVS NTorq 125',
-    category: 'Scooter',
-    basePricePerDay: 600,
-    imageUrl: 'https://images.unsplash.com/photo-1602735746931-18e4ba398553?auto=format&fit=crop&q=80&w=800',
-    features: ['Bluetooth Sync', 'Digital Console', 'Storage', '125cc Engine'],
-  },
-  {
-    id: 'activa',
-    name: 'Honda Activa 6G',
-    category: 'Scooter',
-    basePricePerDay: 500,
-    imageUrl: 'https://images.unsplash.com/photo-1591557303869-7036d070b435?auto=format&fit=crop&q=80&w=800',
-    features: ['High Mileage', 'Easy Handling', 'Storage', '110cc Engine'],
-  }
-];
+
 
 export default function BookingWidget() {
   const [step, setStep] = useState(1);
+  const [categoryFilter, setCategoryFilter] = useState<'All' | 'Bikes' | 'Scooters'>('All');
   const [selectedBikeId, setSelectedBikeId] = useState<string | null>(null);
+  const [fleet, setFleet] = useState<Bike[]>([]);
+  useEffect(() => { setFleet(getFleet()); }, []);
   
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('09:00');
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('18:00');
   const [seasonInfo, setSeasonInfo] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   const [aadharFile, setAadharFile] = useState<File | null>(null);
   const [licenseFile, setLicenseFile] = useState<File | null>(null);
@@ -87,7 +45,13 @@ export default function BookingWidget() {
     return diffDays + 1;
   }, [startDate, endDate, startTime, endTime]);
 
-  const selectedBike = useMemo(() => FLEET.find(b => b.id === selectedBikeId), [selectedBikeId]);
+  const filteredFleet = useMemo(() => {
+    if (categoryFilter === 'All') return fleet;
+    if (categoryFilter === 'Scooters') return fleet.filter(b => b.category === 'Scooter');
+    return fleet.filter(b => b.category !== 'Scooter');
+  }, [categoryFilter, fleet]);
+
+  const selectedBike = useMemo(() => fleet.find(b => b.id === selectedBikeId), [selectedBikeId]);
 
   useEffect(() => {
     if (startDate) {
@@ -125,7 +89,10 @@ export default function BookingWidget() {
   };
 
   const handleUpload = async () => {
-    if (!aadharFile || !licenseFile) return;
+    if (!aadharFile || !licenseFile || !name || !phone || !email) {
+      setUploadError('Please fill in all details and upload documents.');
+      return;
+    }
     setIsUploading(true);
     setUploadError('');
 
@@ -143,7 +110,7 @@ export default function BookingWidget() {
         const bucketExists = buckets.some(b => b.name === 'documents');
         if (!bucketExists) {
           await supabase.storage.createBucket('documents', {
-            public: false,
+            public: true, // Making public so admin can view them easily
             allowedMimeTypes: ['image/jpeg', 'image/png', 'application/pdf'],
           });
         }
@@ -157,7 +124,10 @@ export default function BookingWidget() {
         .upload(aadharPath, aadharFile);
 
       if (aadharError) throw aadharError;
-
+      
+      const { data: aadharUrlData } = supabase.storage.from('documents').getPublicUrl(aadharPath);
+      const aadharPublicUrl = aadharUrlData.publicUrl;
+      
       // Upload License
       const licenseExt = licenseFile.name.split('.').pop();
       const licensePath = `${Date.now()}_license.${licenseExt}`;
@@ -166,8 +136,96 @@ export default function BookingWidget() {
         .upload(licensePath, licenseFile);
 
       if (licenseError) throw licenseError;
+      
+      const { data: licenseUrlData } = supabase.storage.from('documents').getPublicUrl(licensePath);
+      const licensePublicUrl = licenseUrlData.publicUrl;
 
+      let bookingId = '';
+      try { bookingId = crypto.randomUUID(); } catch(e) { bookingId = 'BKG-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9); }
+
+      const payload = {
+           id: bookingId,
+           bike_id: selectedBike.id,
+           bike_name: selectedBike.name,
+           start_date: startDate,
+           start_time: startTime.includes(':') && startTime.length === 5 ? startTime + ':00' : startTime,
+           end_date: endDate,
+           end_time: endTime.includes(':') && endTime.length === 5 ? endTime + ':00' : endTime,
+           total_price: estimatedPrice,
+           customer_name: name,
+           customer_email: email || null,
+           customer_phone: phone,
+           aadhar_url: aadharPublicUrl || null,
+           license_url: licensePublicUrl || null
+      };
+
+      // Insert booking record
+      const { data: insertedData, error: bookingError } = await supabase
+        .from('bookings')
+        .insert([payload]).select().single();
+
+      if (bookingError) {
+         console.warn('Booking Error Detail:', JSON.stringify(bookingError));
+         
+         // Fallback if UUID id failed
+         if (bookingError.message && bookingError.message.includes('uuid')) {
+             delete payload.id;
+             const { data: retryData, error: retryError } = await supabase
+                .from('bookings')
+                .insert([payload]).select().single();
+                
+             if (retryError) {
+                setUploadError('Failed to save booking to database. ' + retryError.message);
+                setIsUploading(false);
+                return;
+             } else if (retryData) {
+                bookingId = retryData.id;
+             }
+         } else {
+             if (bookingError.code === '42501') {
+                 setUploadError('Supabase Permission Denied: Please go to your Supabase SQL Editor and run "GRANT ALL ON public.bookings TO anon;" or disable RLS on the bookings table.');
+             } else {
+                 setUploadError('Failed to save booking to database. ' + bookingError.message);
+             }
+             setIsUploading(false);
+             return; // Stop execution, don't show success screen
+         }
+      } else if (insertedData) {
+         bookingId = insertedData.id;
+      }
+
+      // Save to local storage for admin dashboard
+      const localBooking = {
+        id: bookingId,
+        bikeId: selectedBike.id,
+        bikeName: selectedBike.name,
+        customerName: name,
+        email: email,
+        phone: phone,
+        startDate: startDate,
+        startTime: startTime,
+        endDate: endDate,
+        endTime: endTime,
+        totalPrice: estimatedPrice,
+        status: 'Upcoming',
+        timestamp: new Date().toISOString(),
+        hasDocuments: true,
+        aadhar_url: aadharPublicUrl,
+        license_url: licensePublicUrl,
+        preRentalPhotos: [],
+        postRentalPhotos: []
+      };
+      saveBooking(localBooking);
+
+      // Reduce stock
+      const updatedFleet = fleet.map(b => 
+        b.id === selectedBike.id ? { ...b, stock: Math.max(0, b.stock - 1) } : b
+      );
+      setFleet(updatedFleet);
+      saveFleet(updatedFleet);
+      
       setUploadSuccess(true);
+
     } catch (err: any) {
       if (err.message?.includes('Bucket not found') || err.error === 'Bucket not found' || err.name === 'StorageApiError') {
         // Fallback for preview environment if bucket isn't set up yet
@@ -186,17 +244,17 @@ export default function BookingWidget() {
         {/* Step Indicator */}
       <div className="flex items-center justify-center gap-3 mb-10">
         <div className={`flex items-center gap-2 ${step === 1 ? 'text-emerald-800' : 'text-slate-400 cursor-pointer hover:text-emerald-700'}`} onClick={() => setStep(1)}>
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border ${step === 1 ? 'border-emerald-800 bg-emerald-50 text-emerald-800' : 'border-slate-300'}`}>1</div>
+          <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border ${step === 1 ? 'border-emerald-800 bg-emerald-50 text-emerald-800' : 'border-slate-300'}`}>1</div>
           <span className="text-[10px] uppercase tracking-widest font-bold">Select Vehicle</span>
         </div>
         <div className="w-12 h-px bg-slate-300"></div>
         <div className={`flex items-center gap-2 ${step === 2 ? 'text-emerald-800' : 'text-slate-400'}`}>
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border ${step === 2 ? 'border-emerald-800 bg-emerald-50 text-emerald-800' : 'border-slate-300'}`}>2</div>
+          <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border ${step === 2 ? 'border-emerald-800 bg-emerald-50 text-emerald-800' : 'border-slate-300'}`}>2</div>
           <span className="text-[10px] uppercase tracking-widest font-bold">Booking Details</span>
         </div>
         <div className="w-12 h-px bg-slate-300"></div>
         <div className={`flex items-center gap-2 ${step === 3 ? 'text-emerald-800' : 'text-slate-400'}`}>
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border ${step === 3 ? 'border-emerald-800 bg-emerald-50 text-emerald-800' : 'border-slate-300'}`}>3</div>
+          <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border ${step === 3 ? 'border-emerald-800 bg-emerald-50 text-emerald-800' : 'border-slate-300'}`}>3</div>
           <span className="text-[10px] uppercase tracking-widest font-bold">Verification</span>
         </div>
       </div>
@@ -209,14 +267,14 @@ export default function BookingWidget() {
               <p className="text-slate-600 text-sm">Select from our well-maintained fleet for Corbett and beyond.</p>
             </div>
             <div className="flex gap-2">
-              <button className="px-4 py-1.5 rounded-full bg-emerald-800 text-white text-[10px] uppercase tracking-widest font-bold shadow-sm">All</button>
-              <button className="px-4 py-1.5 rounded-full bg-white border border-slate-200 text-slate-500 hover:border-emerald-500 hover:text-emerald-800 text-[10px] uppercase tracking-widest font-bold transition-colors">Bikes</button>
-              <button className="px-4 py-1.5 rounded-full bg-white border border-slate-200 text-slate-500 hover:border-emerald-500 hover:text-emerald-800 text-[10px] uppercase tracking-widest font-bold transition-colors">Scooters</button>
+              <button onClick={() => setCategoryFilter('All')} className={`px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest font-bold transition-colors ${categoryFilter === 'All' ? 'bg-emerald-800 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-500 hover:border-emerald-500 hover:text-emerald-800'}`}>All</button>
+              <button onClick={() => setCategoryFilter('Bikes')} className={`px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest font-bold transition-colors ${categoryFilter === 'Bikes' ? 'bg-emerald-800 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-500 hover:border-emerald-500 hover:text-emerald-800'}`}>Bikes</button>
+              <button onClick={() => setCategoryFilter('Scooters')} className={`px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest font-bold transition-colors ${categoryFilter === 'Scooters' ? 'bg-emerald-800 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-500 hover:border-emerald-500 hover:text-emerald-800'}`}>Scooters</button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FLEET.map((bike, idx) => (
+            {filteredFleet.map((bike, idx) => (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -278,7 +336,7 @@ export default function BookingWidget() {
                       <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Pick-up Date</label>
                       <div className="relative mb-4">
                         <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
-                        <input 
+                        <input accept="image/jpeg, image/png, image/webp, application/pdf" 
                           type="date" 
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-3.5 text-sm font-medium text-emerald-950 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                           value={startDate}
@@ -289,7 +347,7 @@ export default function BookingWidget() {
                       <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Pick-up Time</label>
                       <div className="relative">
                         <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
-                        <input 
+                        <input accept="image/jpeg, image/png, image/webp, application/pdf" 
                           type="time" 
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-3.5 text-sm font-medium text-emerald-950 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                           value={startTime}
@@ -301,7 +359,7 @@ export default function BookingWidget() {
                       <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Drop-off Date</label>
                       <div className="relative mb-4">
                         <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
-                        <input 
+                        <input accept="image/jpeg, image/png, image/webp, application/pdf" 
                           type="date" 
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-3.5 text-sm font-medium text-emerald-950 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                           value={endDate}
@@ -312,7 +370,7 @@ export default function BookingWidget() {
                       <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Drop-off Time</label>
                       <div className="relative">
                         <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
-                        <input 
+                        <input accept="image/jpeg, image/png, image/webp, application/pdf" 
                           type="time" 
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-3.5 text-sm font-medium text-emerald-950 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                           value={endTime}
@@ -322,6 +380,21 @@ export default function BookingWidget() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-6">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Full Name</label>
+                      <input accept="image/jpeg, image/png, image/webp, application/pdf" type="text" placeholder="John Doe" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-emerald-950 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors" value={name} onChange={(e) => setName(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Email Address</label>
+                      <input accept="image/jpeg, image/png, image/webp, application/pdf" type="email" placeholder="john@example.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-emerald-950 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Phone Number</label>
+                      <input accept="image/jpeg, image/png, image/webp, application/pdf" type="tel" placeholder="+91 98765 43210" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-emerald-950 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    </div>
+                  </div>
+                  
                   {/* Dynamic Pricing Result */}
                   <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 mt-4">
                     <div className="flex justify-between items-center mb-2">
@@ -341,7 +414,7 @@ export default function BookingWidget() {
 
                   <button 
                     onClick={() => setStep(3)}
-                    disabled={!startDate || !endDate || estimatedPrice === 0}
+                    disabled={!startDate || !endDate || estimatedPrice === 0 || !name || !email || !phone}
                     className="w-full bg-emerald-800 text-white py-4 rounded-xl font-bold uppercase text-sm tracking-widest hover:bg-emerald-900 transition-colors shadow-lg shadow-emerald-900/20 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                   >
                     Proceed to Verification
@@ -396,7 +469,7 @@ export default function BookingWidget() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Aadhar Card</label>
-                  <input 
+                  <input accept="image/jpeg, image/png, image/webp, application/pdf" 
                     type="file" 
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-emerald-950 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:uppercase file:tracking-widest file:font-bold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 cursor-pointer"
                     onChange={(e) => setAadharFile(e.target.files?.[0] || null)}
@@ -404,7 +477,7 @@ export default function BookingWidget() {
                 </div>
                 <div>
                   <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Driver's License</label>
-                  <input 
+                  <input accept="image/jpeg, image/png, image/webp, application/pdf" 
                     type="file" 
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-emerald-950 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:uppercase file:tracking-widest file:font-bold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 cursor-pointer"
                     onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}

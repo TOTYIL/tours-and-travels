@@ -1,109 +1,94 @@
-export interface Bike {
-  id: string;
-  name: string;
-  category: string;
-  basePricePerDay: number;
-  imageUrl: string;
-  features: string[];
-  stock: number;
-}
+import { Bike } from '../types';
 
-export interface Booking {
-  id: string;
-  bikeId: string;
-  bikeName: string;
-  customerName: string;
-  email: string;
-  phone: string;
-  startDate: string;
-  startTime: string;
-  endDate: string;
-  endTime: string;
-  totalPrice: number;
-  status: string;
-  timestamp: string;
-  hasDocuments: boolean;
-}
+export type { Bike };
 
-const DEFAULT_FLEET: Bike[] = [
+export const defaultBikes: Bike[] = [
   {
-    id: 'himalayan',
-    name: 'Royal Enfield Himalayan 411',
-    category: 'Adventure',
-    basePricePerDay: 1500,
-    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=800',
-    features: ['All-Terrain Tyres', 'Panniers Available', 'ABS', '411cc Engine'],
-    stock: 2
-  },
-  {
-    id: 'classic350',
+    id: 'b1',
     name: 'Royal Enfield Classic 350',
-    category: 'Cruiser',
+    category: 'cruiser',
     basePricePerDay: 1200,
-    imageUrl: 'https://images.unsplash.com/photo-1599819811279-d5064ce97fe2?auto=format&fit=crop&q=80&w=800',
-    features: ['Comfortable Seating', 'Classic Styling', '349cc Engine', 'Disc Brakes'],
-    stock: 4
+    imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=800',
+    features: ['349cc Engine', 'Classic Styling', 'Comfortable Pillion'],
+    stock: 1,
+    expenses: 0
   },
   {
-    id: 'meteor',
-    name: 'Royal Enfield Meteor 350',
-    category: 'Cruiser',
-    basePricePerDay: 1300,
-    imageUrl: 'https://images.unsplash.com/photo-1647413340578-8ba948b89e7f?auto=format&fit=crop&q=80&w=800',
-    features: ['Tripper Navigation', 'Relaxed Stance', '349cc Engine'],
-    stock: 3
+    id: 'b2',
+    name: 'Himalayan 411',
+    category: 'adventure',
+    basePricePerDay: 1500,
+    imageUrl: 'https://images.unsplash.com/photo-1622185135505-2d795003994a?auto=format&fit=crop&q=80&w=800',
+    features: ['411cc Engine', 'Off-road Ready', 'Luggage Mounts'],
+    stock: 1,
+    expenses: 0
   },
   {
-    id: 'xpulse',
-    name: 'Hero XPulse 200 4V',
-    category: 'Off-Road',
-    basePricePerDay: 1000,
-    imageUrl: 'https://images.unsplash.com/photo-1650383794354-946453664d95?auto=format&fit=crop&q=80&w=800',
-    features: ['Lightweight', 'High Ground Clearance', '200cc Engine', 'Off-Road Suspension'],
-    stock: 3
-  },
-  {
-    id: 'ntorq',
-    name: 'TVS NTorq 125',
-    category: 'Scooter',
+    id: 'b3',
+    name: 'Honda Activa 6G',
+    category: 'scooter',
     basePricePerDay: 600,
-    imageUrl: 'https://images.unsplash.com/photo-1602735746931-18e4ba398553?auto=format&fit=crop&q=80&w=800',
-    features: ['Bluetooth Sync', 'Digital Console', 'Storage', '125cc Engine'],
-    stock: 5
+    imageUrl: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&q=80&w=800',
+    features: ['110cc Engine', 'Automatic', 'Storage Space'],
+    stock: 1,
+    expenses: 0
+  },
+  {
+    id: 'b4',
+    name: 'Bajaj Avenger Cruise 220',
+    category: 'cruiser',
+    basePricePerDay: 900,
+    imageUrl: 'https://images.unsplash.com/photo-1449426468159-d96dbf08f19f?auto=format&fit=crop&q=80&w=800',
+    features: ['220cc Engine', 'Low Seat Height', 'Highway Cruiser'],
+    stock: 1,
+    expenses: 0
   }
 ];
 
-const DEFAULT_SLIDESHOW = [
-  "https://images.unsplash.com/photo-1520116468816-95b69f847357?auto=format&fit=crop&q=80&w=1200",
-  "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&q=80&w=1200",
-  "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&q=80&w=1200"
-];
-
 export const getFleet = (): Bike[] => {
-  const data = localStorage.getItem('yt_fleet');
-  return data ? JSON.parse(data) : DEFAULT_FLEET;
+  const data = localStorage.getItem('fleet');
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch(e) {}
+  }
+  return defaultBikes;
 };
 
 export const saveFleet = (fleet: Bike[]) => {
-  localStorage.setItem('yt_fleet', JSON.stringify(fleet));
+  localStorage.setItem('fleet', JSON.stringify(fleet));
 };
 
-export const getSlideshow = (): string[] => {
-  const data = localStorage.getItem('yt_slideshow');
-  return data ? JSON.parse(data) : DEFAULT_SLIDESHOW;
+export const getBookings = (): any[] => {
+  const data = localStorage.getItem('bookings');
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch(e) {}
+  }
+  return [];
 };
 
-export const saveSlideshow = (slides: string[]) => {
-  localStorage.setItem('yt_slideshow', JSON.stringify(slides));
+export const saveAllBookings = (bookings: any[]) => {
+  localStorage.setItem('bookings', JSON.stringify(bookings));
 };
 
-export const getBookings = (): Booking[] => {
-  const data = localStorage.getItem('yt_bookings');
-  return data ? JSON.parse(data) : [];
-};
-
-export const saveBooking = (booking: Booking) => {
+export const saveBooking = (booking: any) => {
   const bookings = getBookings();
   bookings.push(booking);
-  localStorage.setItem('yt_bookings', JSON.stringify(bookings));
+  saveAllBookings(bookings);
+};
+
+export const getSlideshow = (): any[] => {
+  const data = localStorage.getItem('slideshow');
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch(e) {}
+  }
+  return [];
+};
+
+export const saveSlideshow = (slideshow: any[]) => {
+  localStorage.setItem('slideshow', JSON.stringify(slideshow));
 };

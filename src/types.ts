@@ -7,4 +7,6 @@ export interface Bike {
   basePricePerDay: number;
   imageUrl: string;
   features: string[];
+  stock: number;
+  expenses?: number;
 }

@@ -74,7 +74,7 @@ export default function Home({ onBookNow }: { onBookNow: () => void }) {
           <div className="lg:w-1/3">
             <h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">Our Happy <span className="italic font-serif text-emerald-400 font-normal">Riders</span></h2>
             <p className="text-emerald-100/80 font-light mb-8 leading-relaxed text-sm">
-              Join thousands of travelers who have chosen Yazdani Travels for their Corbett and Nainital expeditions. 
+              Join thousands of travelers who have chosen xyz Travels for their Corbett and Nainital expeditions. 
             </p>
             <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-widest text-[10px]">
               <Users className="w-4 h-4" /> Over 5,000+ Journeys

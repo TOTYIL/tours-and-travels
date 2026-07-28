@@ -1,7 +1,7 @@
 {
   "name": "Yazdani Travels",
   "description": "Professional bike rental service based in Corbett National Park, Nainital.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["geolocation"],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
