@@ -1,10 +1,15 @@
 import { Compass, Menu, X } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRef } from 'react';
 import { logoBase64 } from '../assets/logoBase64';
 
-export default function Header({ onNavigate, currentPage }: { onNavigate: (page: 'home' | 'booking' | 'trails' | 'dev' | 'support') => void, currentPage: string }) {
+export default function Header() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentPage = location.pathname.substring(1) || 'home';
+  const onNavigate = (page) => navigate(page === 'home' ? '/' : `/${page}`);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const clickCount = useRef(0);
   const clickTimer = useRef<NodeJS.Timeout | null>(null);

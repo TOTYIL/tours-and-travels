@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { logoBase64 } from '../assets/logoBase64';
 import React, { useState, useEffect } from 'react';
 import { getFleet, saveFleet, getSlideshow, saveSlideshow, getBookings, saveAllBookings, Bike, Booking } from '../lib/data';
@@ -7,7 +8,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import { useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 
-export default function DevPage({ onNavigate }: { onNavigate: (page: 'home' | 'booking' | 'trails' | 'dev' | 'support') => void }) {
+export default function DevPage() {
+  const navigate = useNavigate();
+  const onNavigate = (page) => navigate(page === 'home' ? '/' : `/${page}`);
   const [authenticated, setAuthenticated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [password, setPassword] = useState('');

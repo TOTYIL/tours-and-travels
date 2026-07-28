@@ -1,10 +1,13 @@
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from 'react';
 import { ArrowRight, Mountain, ShieldCheck, Map, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { getSlideshow } from '../lib/data';
 import { heroBgBase64 } from '../assets/heroBgBase64';
 
-export default function Home({ onBookNow }: { onBookNow: () => void }) {
+export default function Home() {
+  const navigate = useNavigate();
+  const onBookNow = () => navigate('/booking');
   const [slideshow, setSlideshow] = useState<string[]>([]);
   useEffect(() => {
     setSlideshow(getSlideshow());

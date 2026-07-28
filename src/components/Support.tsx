@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Phone, Send, ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useChat } from '../hooks/useChat';
 
-export default function Support({ onBack }: { onBack: () => void }) {
+export default function Support() {
+  const navigate = useNavigate();
+  const onBack = () => navigate('/');
   const [view, setView] = useState<'main' | 'enquiry'>('main');
   const { messages, sendMessage } = useChat();
   const [input, setInput] = useState('');
